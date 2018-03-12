@@ -16,24 +16,21 @@ public class ActivityTransferVo{
 
     private int allNum;
 
-//    private IntArrayList userNumList;
-    int[] userNumList;
-
-    public int[] getUserNumList() {
-        return userNumList;
-    }
+    private IntArrayList userNumList;
 
     public ActivityTransferVo(long actPlatfrom, int allNum, int userNum) {
         this.actPlatfrom = actPlatfrom;
         this.allNum = allNum;
-//        this.userNumList = new IntArrayList(userNum * 2);
-        userNumList = new int[userNum * 2];
+        this.userNumList = new IntArrayList(userNum * 2);
     }
 
-//    public IntArrayList getUserNumList() {
-//        return userNumList;
-//    }
+    public IntArrayList getUserNumList() {
+        return userNumList;
+    }
 
+    public void addUser(int userId, int num){
+        userNumList.add(userId, num);
+    }
 
     public long getActPlatfrom() {
         return actPlatfrom;

@@ -1,7 +1,5 @@
 package com.windlike.io.util;
 
-import com.koloboke.collect.map.hash.HashIntIntMap;
-import com.koloboke.collect.map.hash.HashIntIntMaps;
 import com.koloboke.collect.map.hash.HashLongObjMap;
 import com.koloboke.collect.map.hash.HashLongObjMaps;
 import com.koloboke.collect.set.hash.HashLongSet;
@@ -12,8 +10,6 @@ import com.windlike.io.vo.ActivityVo;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 /**
@@ -21,12 +17,12 @@ import java.util.Random;
  */
 public class TopKComputer {
 
-    public static ActivityVo[] computeTopK(List<ActivityVo> activityList, int k){
+    public static ActivityVo[] computeTopK(HashLongObjMap<ActivityVo> activityMap, int k){
 
         ActivityVo[] hval = new ActivityVo[k];
         int i = 0;
         MinHeap<ActivityVo> heap = null;
-        for (ActivityVo activityVo : activityList){
+        for (ActivityVo activityVo : activityMap.values()){
             if(i < k){//前40个元素，先建堆
                 hval[i] = activityVo;
                 if(i == k - 1){
@@ -95,89 +91,24 @@ public class TopKComputer {
         return result;
     }
 
-    public static List<ActivityVo> compressActivityMap(List<ActivityVo> activityList){
-        ActivityVo[] activityVos = TopKComputer.computeTopK(activityList, Constants.VALID_CANDIDATE_NUM);
-//        HashLongObjMap<ActivityVo> s2ActivityMap = HashLongObjMaps.newUpdatableMap(Constants.VALID_CANDIDATE_NUM);
-//        for (ActivityVo activity : activityVos) {
-//            s2ActivityMap.put(activity.getActPlatfrom(), activity);
-//        }
-
-        for(int i = 0 ; i < activityVos.length; i++){
-//            int supposeSize = 0;
-//            if(i == 1){
-//                supposeSize = 51000000;
-//            }else if(i < 5){
-//                supposeSize = 4000000;
-//            }else if(i < 10){
-//                supposeSize = 3300000;
-//            }else if(i < 18){
-//                supposeSize = 2500000;
-//            }else if(i < 25){
-//                supposeSize = 2100000;
-//            }else if(i < 35){
-//                supposeSize = 1900000;
-//            }else if(i < 35){
-//                supposeSize = 1840000;
-//            }else if(i < 40){
-//                supposeSize = 1500000;
-//            }else if(i < 50){
-//                supposeSize = 950000;
-//            }else if(i < 60){
-//                supposeSize = 850000;
-//            }else if(i < 70){
-//                supposeSize = 750000;
-//            }else if(i < 80){
-//                supposeSize = 600000;
-//            }else if(i < 90){
-//                supposeSize = 450000;
-//            }else if(i < 100){
-//                supposeSize = 490000;
-//            }else{
-//                supposeSize = 450000;
-//            }
-
-
-            ActivityVo old = activityVos[i];
-            HashIntIntMap newUserNumMap = HashIntIntMaps.newUpdatableMap(old.getUserNumMap().size() * 100 + 50000);
-            newUserNumMap.putAll(old.getUserNumMap());
-            old.setUserNumMap(newUserNumMap);
+    public static HashLongObjMap<ActivityVo> compressActivityMap(HashLongObjMap<ActivityVo> activityMap){
+        ActivityVo[] activityVos = TopKComputer.computeTopK(activityMap, Constants.VALID_CANDIDATE_NUM);
+        HashLongObjMap<ActivityVo> s2ActivityMap = HashLongObjMaps.newUpdatableMap(Constants.VALID_CANDIDATE_NUM * 2);
+        for (ActivityVo activity : activityVos) {
+            s2ActivityMap.put(activity.getActPlatfrom(), activity);
         }
-
-        activityList = new ArrayList<>(activityVos.length);
-        for(ActivityVo vo : activityVos){
-            activityList.add(vo);
-        }
-
-        return activityList;
+        return s2ActivityMap;
     }
 
-    public static HashLongObjMap<HashLongSet> compressBrandMap(HashLongObjMap<HashLongSet> brandMap, List<ActivityVo> activityList){
+    public static HashLongObjMap<HashLongSet> compressBrandMap(HashLongObjMap<HashLongSet> brandMap, HashLongObjMap<ActivityVo> activityMap){
         HashLongObjMap<HashLongSet> s2brandMap = HashLongObjMaps.newUpdatableMap(Constants.VALID_CANDIDATE_NUM * 50);
         brandMap.cursor().forEachForward((brandkey, brandActs)->{
             byte platform = (byte) (brandkey & 3);
-            HashLongSet newBrandActs = HashLongSets.newUpdatableSet(24);
-
-            //先保存老index和新index的关系
-            HashIntIntMap indexMap = HashIntIntMaps.newUpdatableMap(activityList.size());
-            for(int i = 0; i < activityList.size(); i++){
-                indexMap.put(activityList.get(i).getIndex(), i);
-            }
-
-            brandActs.cursor().forEachForward((x) -> {
-//                long actPlatform = ((actStartEnd / 10000 + 20170000000000000L) << 2) + platform;
-//                if(activityList.get(actPlatform) != null){
-//                    newBrandActs.add(actStartEnd);
-//                }
-                int index = (int) (x & 0xffff);
-                long endMonDay = ((x-index) >>> 16) & 0xffff;
-                long startMonDay = x >>> 32;
-                for(int i = 0; i < activityList.size(); i++){
-                    ActivityVo vo = activityList.get(i);
-                    if(vo.getIndex() == index){
-                        long brandAct = (startMonDay << 32) + (endMonDay << 16) + indexMap.get(index);//老index->newIndex
-                        newBrandActs.add(brandAct);
-                        break;
-                    }
+            HashLongSet newBrandActs = HashLongSets.newUpdatableSet(16);
+            brandActs.cursor().forEachForward((actStartEnd) -> {
+                long actPlatform = ((actStartEnd / 10000 + 20170000000000000L) << 2) + platform;
+                if(activityMap.get(actPlatform) != null){
+                    newBrandActs.add(actStartEnd);
                 }
             });
 
@@ -186,31 +117,26 @@ public class TopKComputer {
             }
         });
 
-        //更新activitys的index
-        for(int i = 0; i < activityList.size(); i++){
-            activityList.get(i).setIndex(i);
-        }
-
         return s2brandMap;
     }
 
-    private static String printInfo(List<ActivityVo> activityList){
+    private static String printInfo(HashLongObjMap<ActivityVo> activityMap){
         long allNum = 0;
         long userNum = 0;
-        for (ActivityVo activityVo : activityList){
+        for (ActivityVo activityVo : activityMap.values()){
             allNum += activityVo.getAllNum();
             userNum += activityVo.getUserNumMap().size();
         }
         return "allNum:" + allNum + ",userNum:" + userNum;
     }
 
-    public static void collectInfoAndPrint(List<ActivityVo> activityList){
-        ActivityVo[] result = TopKComputer.computeTopK(activityList, 40);
+    public static void collectInfoAndPrint(HashLongObjMap<ActivityVo> activityMap){
+        ActivityVo[] result = TopKComputer.computeTopK(activityMap, 40);
         Random random = new Random();
         String filename = random.nextInt(50) + ".tt";
         try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter(filename))){
-            System.out.println(printInfo(activityList) + ", save to" + filename);//sout
-            fileWriter.write(printInfo(activityList) + "\n");
+            System.out.println(printInfo(activityMap) + ", save to" + filename);//sout
+            fileWriter.write(printInfo(activityMap) + "\n");
             for (ActivityVo vo : result
                     ) {
                 fileWriter.write(vo + "\n");

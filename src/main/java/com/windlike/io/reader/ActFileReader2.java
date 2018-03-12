@@ -5,12 +5,11 @@ import com.koloboke.collect.map.hash.HashLongObjMaps;
 import com.koloboke.collect.set.hash.HashLongSet;
 import com.koloboke.collect.set.hash.HashLongSets;
 import com.windlike.io.Constants;
-import com.windlike.io.vo.Platforms;
+import com.windlike.io.Platforms;
 import com.windlike.io.util.InvincibleConvertUtil;
 import com.windlike.io.vo.ActivityVo;
 
 import java.io.*;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -19,6 +18,16 @@ import java.util.List;
  *
  */
 public class ActFileReader2 {
+	/**
+	 * 读取开始的点
+	 */
+	private long beginFilePointer;
+	/**
+	 * 读取结束的点
+	 */
+	private long endFilePointer;
+
+	private int processThreadNum;
 
 	private String orignFileFullName;
 
@@ -28,78 +37,68 @@ public class ActFileReader2 {
 
 	private int row = 0;//行数
 
-	public ActFileReader2(String orignFileFullName , HashLongObjMap<HashLongSet> brandMap) {
+	public ActFileReader2(String orignFileFullName , HashLongObjMap<ActivityVo> activityMap, HashLongObjMap<HashLongSet> brandMap) {
 		this.orignFileFullName = orignFileFullName;
-		this.activityMap = HashLongObjMaps.newUpdatableMap(Constants.DEFAULT_ACT_SIZE);
+		this.activityMap = activityMap;
 		this.brandMap = brandMap;
 	}
 
-	public List<ActivityVo> call() {
-		long t1 = System.currentTimeMillis();
-
-		List<ActivityVo> activitys = new ArrayList<>(Constants.MAX_ACT_SIZE);
-		int off = 0;
-
+	public Void call() {
 		//启动读写任务
 		try (BufferedReader br = new BufferedReader(new FileReader(new File(orignFileFullName)))){
 			String str = null;
 			while((str = br.readLine()) != null){
 				row++;
 
-//				List<String> pieces = InvincibleConvertUtil.split(str, ',', 6);
-				String[] pieces = InvincibleConvertUtil.split(str, ',', 6);
-
-				int platform = Platforms.shortNameToIndex(pieces[0].charAt(1));
-				long actName = InvincibleConvertUtil.stringToLong(pieces[1]);
+				List<String> pieces = InvincibleConvertUtil.split(str, ',', 6);
+				int platform = Platforms.shortNameToIndex(pieces.get(0).charAt(1));
+				long actName = InvincibleConvertUtil.stringToLong(pieces.get(1));
 				long actPlatform = (actName << 2) + platform;
 				ActivityVo activityVo = activityMap.get(actPlatform);
-				String endStr = pieces[3];
-				String startStr = pieces[2];
-				if(activityVo == null){//新活动
+				String endStr = pieces.get(3);
+				if(activityVo == null){
 					activityVo = new ActivityVo();
 					activityMap.put(actPlatform, activityVo);
 
-					activityVo.setIndex(off);
 					activityVo.setActPlatfrom(actPlatform);
-					activityVo.setStartTime(InvincibleConvertUtil.stringToInt(pieces[1].substring(4, 8)) * 1000000 + 100000);
+					activityVo.setStartTime(InvincibleConvertUtil.stringToInt(pieces.get(1).substring(4, 8)) * 1000000 + 100000);
 					activityVo.setEndTime((((byte)endStr.charAt(5) - 48) * 1000000000 + ((byte)endStr.charAt(6) - 48) * 100000000 + ((byte)endStr.charAt(8) - 48) * 10000000 + 1000000 * ((byte)endStr.charAt(9) - 48))
 							+ 95959);
 
-					activitys.add(activityVo);
-					off++;
-				}
-				long endMonDay = ((byte)endStr.charAt(5) - 48) * 1000 +  ((byte)endStr.charAt(6) - 48) * 100 + ((byte)endStr.charAt(8)- 48) * 10 + ((byte)endStr.charAt(9) - 48);
-				long startMonDay = ((byte)startStr.charAt(5) - 48) * 1000 +  ((byte)startStr.charAt(6) - 48) * 100 + ((byte)startStr.charAt(8)- 48) * 10 + ((byte)startStr.charAt(9) - 48);
-				long index = activityVo.getIndex();
-				long brandAct = (startMonDay << 32) + (endMonDay << 16) + index;
 
-//				int endMonDay = ((byte)endStr.charAt(5) - 48) * 1000 +  ((byte)endStr.charAt(6) - 48) * 100 + ((byte)endStr.charAt(8)- 48) * 10 + ((byte)endStr.charAt(9) - 48);
-				long brandId = InvincibleConvertUtil.stringToInt(pieces[5]);
+				}
+				int endMonDay = ((byte)endStr.charAt(5) - 48) * 1000 +  ((byte)endStr.charAt(6) - 48) * 100 + ((byte)endStr.charAt(8)- 48) * 10 + ((byte)endStr.charAt(9) - 48);
+				long brandId = InvincibleConvertUtil.stringToInt(pieces.get(5));
 				long brandPlatform = (brandId << 2) + platform;
-//				long brandAct = (actName - 20170000000000000L) * 10000 + endMonDay;
+				long brandAct = (actName - 20170000000000000L) * 10000 + endMonDay;
 				HashLongSet brandActSet = brandMap.get(brandPlatform);
 				if(brandActSet != null){
 					brandActSet.add(brandAct);
 				}else{
-					brandActSet = HashLongSets.newUpdatableSet(24);
+					brandActSet = HashLongSets.newUpdatableSet(16);
 					brandMap.put(brandPlatform, brandActSet);
 					brandActSet.add(brandAct);
 				}
 
+//				activityVo.addBrandId(InvincibleConvertUtil.stringToInt(pieces.get(5)));
 			}
+//			int length = (int) (endFilePointer- beginFilePointer + 1);
+//			MappedByteBuffer inputBuffer = orginFile.getChannel().map(FileChannel.MapMode.READ_ONLY, beginFilePointer, length);//需要注意length不能大于2G哦哦哦哦哦@！！
+//			spiltFileLine(inputBuffer, beginFilePointer, length);
+//			readAndProcess(inputBuffer);
 
 			//清理
 			activityMap = null;
 			brandMap = null;
 
-			System.out.println("actFileReader2此任务完成，解释行数：" + row + ",time:" + (System.currentTimeMillis() - t1));
+			System.out.println("此任务完成，解释行数：" + row);
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
-		} catch (Exception e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
-		return activitys;
+		return null;
 	}
 
 

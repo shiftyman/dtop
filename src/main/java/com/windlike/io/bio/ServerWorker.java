@@ -1,5 +1,8 @@
 package com.windlike.io.bio;
 
+import com.koloboke.collect.map.hash.HashIntIntMap;
+import com.koloboke.collect.map.hash.HashIntIntMaps;
+import com.koloboke.collect.map.hash.HashLongObjMap;
 import com.windlike.io.Constants;
 import com.windlike.io.MasterApp;
 import com.windlike.io.counter.NativeCounter;
@@ -7,6 +10,7 @@ import com.windlike.io.reader.FirstOrderFileReaderByBuffer;
 import com.windlike.io.util.MasterFirstOrderHandler;
 import com.windlike.io.vo.ActivityTransferVo;
 import com.windlike.io.vo.ActivityVo;
+import com.windlike.io.vo.BrandTransferVo;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -14,7 +18,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.BitSet;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -29,20 +32,27 @@ public class ServerWorker implements Runnable{
         this.socket = socket;
     }
 
+    private BrandTransferVo[] brands;
+
     @Override
     public void run() {
         try (DataInputStream input = new DataInputStream(
                 new BufferedInputStream(socket.getInputStream()))) {
+//        try (DataInputStream input = new DataInputStream(
+//                new BufferedInputStream(socket.getInputStream()))) {
+//        try (DataInputStream input = new DataInputStream(
+//                  (socket.getInputStream()))) {
 
             long t1 = System.currentTimeMillis();
 
             byte msgType = input.readByte();
+            System.out.println("收到一条消!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!息："+ socket.getInetAddress() + ",消息类型:" + msgType);
             if(msgType == Protocol.MsgType.START.ordinal()){//slave
-                NativeCounter nativeCounter = new NativeCounter();
+                NativeCounter nativeCounter = new NativeCounter(Constants.DEFAULT_LIKE_GOOD_THREAD_NUM);
                 nativeCounter.count();
 
                 //send to master
-                sendTopNToMaster(nativeCounter.getActivityVos());
+                sendTopNToMaster(nativeCounter.getActivityMap());
             }else if(msgType == Protocol.MsgType.QUERY_FIRST_ORDER.ordinal()){//slave
                 //获取消息内容
                 int size = input.readInt();
@@ -172,11 +182,11 @@ public class ServerWorker implements Runnable{
         }
     }
 
-    private void sendTopNToMaster(List<ActivityVo> activityList){
+    private void sendTopNToMaster(HashLongObjMap<ActivityVo> activityMap){
         boolean msgSendSuccessd = false;
         do{
             try {
-                new Client(Constants.MASTER_IP, Constants.SERVER_LISTENING_PORT).send(Protocol.MsgType.REPORT_TOPK, activityList);
+                new Client(Constants.MASTER_IP, Constants.SERVER_LISTENING_PORT).send(Protocol.MsgType.REPORT_TOPK, activityMap);
                 msgSendSuccessd = true;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -185,17 +195,9 @@ public class ServerWorker implements Runnable{
     }
 
     public static void main(String[] args) {
-        int start = 131;
-        int end = 128;
-        int index = 40000;
-        long x = ((long)start << 32) + ((long)end << 16) + (long)index;
-        int t1 = (int) (x & 0xffff);
-        int t2 = (int) ((x-index) >>> 16) & 0xffff;
-        int t3 = (int) (x >>> 32);
-        System.out.println(x);
-        System.out.println(t1);//index
-        System.out.println(t2);//end
-        System.out.println(t3);//start
+        HashIntIntMap map = HashIntIntMaps.newUpdatableMap();
+        map.put(1,1);
+        System.out.println(map.get(12));
     }
 
 }

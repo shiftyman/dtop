@@ -23,47 +23,41 @@ public class Server {
     public Server(int port){
         try {
             serverSocket  = new ServerSocket(port);
-            start();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public void start(){
-        new Thread(() -> {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
 
-            while(true) {
-                try {
-                    Socket socket = serverSocket.accept();
+                while(true) {
+                    try {
+                        Socket socket = serverSocket.accept();
 //                        socket.setReceiveBufferSize(Constants.NETWORK_BUFFER_SIZE);
 //                        socket.setSendBufferSize(Constants.NETWORK_BUFFER_SIZE);
-                    socket.setTrafficClass(0x08);
-                    socket.setTcpNoDelay(true);
-                    System.out.println("收到一个连接");
-                    workers.execute(new ServerWorker(socket));
-                } catch (Exception e) {
-                    e.printStackTrace();
+                        socket.setTrafficClass(0x08);
+                        socket.setTcpNoDelay(true);
+                        System.out.println("收到一个连接");
+                        workers.execute(new ServerWorker(socket));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         },"server-listening-thread").start();
     }
 
-//    public void close(){
-//        try {
-//            this.serverSocket.close();
-//        } catch (IOException e) {
-//            e.printStackTrace();
+    public static void main(String[] args) {
+        new Server(8080).start();
+//        while (true){
+            try {
+                Thread.sleep(20000L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
 //        }
-//    }
-
-//    public static void main(String[] args) {
-//        new Server(8080).start();
-////        while (true){
-//            try {
-//                Thread.sleep(20000L);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
-////        }
-//    }
+    }
 }

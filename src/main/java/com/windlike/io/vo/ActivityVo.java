@@ -27,19 +27,9 @@ public class ActivityVo implements Comparable<ActivityVo>, Cloneable{
 
     private byte mergeNum = 1;
 
-    public void setIndex(int index) {
-        this.index = index;
+    public boolean containsUser(int userId){
+        return userNumMap.containsKey(userId);
     }
-
-    public int getIndex() {
-        return index;
-    }
-
-    private int index;
-
-//    public boolean containsUser(int userId){
-//        return userNumMap.containsKey(userId);
-//    }
 
     public void findAnOldUser(int userId){
         int num = userNumMap.get(userId);
@@ -96,14 +86,11 @@ public class ActivityVo implements Comparable<ActivityVo>, Cloneable{
 
     public void merge(ActivityTransferVo vo){
         this.allNum += vo.getAllNum();
-//        IntArrayList intList = vo.getUserNumList();
-        int[] intList = vo.getUserNumList();
-//        IntListIterator iterator = intList.iterator();
-//        while (iterator.hasNext()){
-        for (int i = 0; i < intList.length; i+=2){
-            this.userNumMap.addValue(intList[i],intList[i+1]);
+        IntArrayList intList = vo.getUserNumList();
+        IntListIterator iterator = intList.iterator();
+        while (iterator.hasNext()){
+            this.userNumMap.addValue(iterator.nextInt(),iterator.nextInt());
         }
-//        }
         mergeNum ++;
     }
 

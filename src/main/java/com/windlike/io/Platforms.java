@@ -1,4 +1,4 @@
-package com.windlike.io.vo;
+package com.windlike.io;
 
 /**
  * Created by windlike.xu on 2018/3/1.

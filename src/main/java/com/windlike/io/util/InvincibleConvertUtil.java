@@ -48,7 +48,7 @@ public class InvincibleConvertUtil {
         return sum;
     }
 
-    public static List<String> split2(String str, char separatorChar, int expectParts) {
+    public static List<String> split(String str, char separatorChar, int expectParts) {
         if(str == null) {
             return null;
         } else {
@@ -86,52 +86,9 @@ public class InvincibleConvertUtil {
         }
     }
 
-
-    public static String[] split(String str, char separatorChar, int expectParts) {
-        if(str == null) {
-            return null;
-        } else {
-            int len = str.length();
-            if(len == 0) {
-                return null;//new String[0];
-            } else {
-//                ArrayList<String> list = new ArrayList(expectParts);
-                String[] list = new String[expectParts];
-                int off = 0;
-                int i = 0;
-                int start = 0;
-                boolean match = false;
-
-                while(i < len) {
-                    if(str.charAt(i) == separatorChar) {
-                        if(match) {
-//                            list.add(str.substring(start, i));
-                            list[off] = str.substring(start, i);
-                            off++;
-                            match = false;
-                        }
-
-                        ++i;
-                        start = i;
-                    } else {
-                        match = true;
-                        ++i;
-                    }
-                }
-
-                if(match) {
-//                    list.add(str.substring(start, i));
-                    list[off] = str.substring(start, i);
-                    off++;
-                }
-
-//                return list.toArray(new String[list.size()]);
-                return list;
-            }
-        }
-    }
-
-
+//    private int actNameToStartTime(long actName){
+//
+//    }
 
     public static void main(String[] args) {
         String str = "sdfdsf sdfds sdf xvcc sdfsd werew";
